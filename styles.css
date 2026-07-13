@@ -146,14 +146,9 @@ input {
 
 .sale-form {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) minmax(110px, 0.65fr) minmax(110px, 0.65fr) auto;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(120px, 0.55fr) minmax(120px, 0.55fr);
   gap: 12px;
   align-items: end;
-}
-
-.sale-product-cell {
-  display: grid;
-  gap: 12px;
 }
 
 label {
@@ -182,6 +177,7 @@ input:focus {
 
 .payment-field {
   display: grid;
+  grid-column: 1 / -1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
   min-width: 0;
@@ -230,6 +226,12 @@ input:focus {
 
 .check-option input:focus {
   box-shadow: none;
+}
+
+.sale-form .button {
+  grid-column: 3;
+  justify-self: end;
+  width: 100%;
 }
 
 .button,
@@ -545,10 +547,6 @@ th.number {
 
   .sale-form {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .sale-product-cell {
-    grid-column: 1 / -1;
   }
 
   .sale-form .button {

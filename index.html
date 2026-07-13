@@ -16,64 +16,37 @@
     </header>
 
     <main class="app-shell">
-      <section class="metrics-grid" aria-label="Сводка">
-        <article class="metric">
-          <span>Смена</span>
-          <strong id="currentShiftTotal">0 ₽</strong>
-          <small id="currentShiftMeta">0 позиций</small>
-        </article>
-        <article class="metric">
-          <span>День</span>
-          <strong id="dayTotal">0 ₽</strong>
-          <small id="dayMeta">0 смен</small>
-        </article>
-        <article class="metric">
-          <span>Неделя</span>
-          <strong id="weekTotal">0 ₽</strong>
-          <small id="weekMeta">0 смен</small>
-        </article>
-        <article class="metric">
-          <span>Месяц</span>
-          <strong id="monthTotal">0 ₽</strong>
-          <small id="monthMeta">0 смен</small>
-        </article>
-      </section>
-
       <section class="workbench">
         <section class="panel">
           <div class="panel-title">
             <h2>Продажа</h2>
           </div>
           <form class="sale-form" id="saleForm">
-            <div class="sale-product-cell">
-              <label>
-                Товар
-                <input
-                  id="productInput"
-                  list="productsDatalist"
-                  type="text"
-                  placeholder="Название"
-                  autocomplete="off"
-                  required
-                />
-              </label>
-              <fieldset class="payment-field">
-                <legend>Оплата</legend>
-                <label class="check-option">
-                  <input type="checkbox" name="paymentMethod" value="eqv" />
-                  <span>экв</span>
-                </label>
-                <label class="check-option">
-                  <input type="checkbox" name="paymentMethod" value="cash" checked />
-                  <span>нал</span>
-                </label>
-                <label class="check-option">
-                  <input type="checkbox" name="paymentMethod" value="transfer" />
-                  <span>пер</span>
-                </label>
-              </fieldset>
-            </div>
+            <label>
+              Товар
+              <input
+                id="productInput"
+                list="productsDatalist"
+                type="text"
+                placeholder="Название"
+                autocomplete="off"
+                required
+              />
+            </label>
             <datalist id="productsDatalist"></datalist>
+
+            <label>
+              Количество
+              <input
+                id="quantityInput"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                value="1"
+                required
+              />
+            </label>
 
             <label>
               Цена
@@ -88,18 +61,21 @@
               />
             </label>
 
-            <label>
-              Количество
-              <input
-                id="quantityInput"
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="0.01"
-                value="1"
-                required
-              />
-            </label>
+            <fieldset class="payment-field">
+              <legend>Оплата</legend>
+              <label class="check-option">
+                <input type="checkbox" name="paymentMethod" value="eqv" />
+                <span>экв</span>
+              </label>
+              <label class="check-option">
+                <input type="checkbox" name="paymentMethod" value="cash" checked />
+                <span>нал</span>
+              </label>
+              <label class="check-option">
+                <input type="checkbox" name="paymentMethod" value="transfer" />
+                <span>пер</span>
+              </label>
+            </fieldset>
 
             <button class="button button-primary" type="submit">
               Добавить товар
@@ -174,6 +150,29 @@
           </table>
           <div class="empty-state" id="emptyShift">Продаж пока нет</div>
         </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Сводка">
+        <article class="metric">
+          <span>Смена</span>
+          <strong id="currentShiftTotal">0 ₽</strong>
+          <small id="currentShiftMeta">0 позиций</small>
+        </article>
+        <article class="metric">
+          <span>День</span>
+          <strong id="dayTotal">0 ₽</strong>
+          <small id="dayMeta">0 смен</small>
+        </article>
+        <article class="metric">
+          <span>Неделя</span>
+          <strong id="weekTotal">0 ₽</strong>
+          <small id="weekMeta">0 смен</small>
+        </article>
+        <article class="metric">
+          <span>Месяц</span>
+          <strong id="monthTotal">0 ₽</strong>
+          <small id="monthMeta">0 смен</small>
+        </article>
       </section>
 
       <section class="panel">
