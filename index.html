@@ -8,16 +8,22 @@
   </head>
   <body>
     <header class="app-header">
-      <div>
+      <div class="header-main">
         <p class="eyebrow">Учетка</p>
         <h1>Учет продаж</h1>
         <p class="company-display" id="companyDisplay"></p>
+        <nav class="tabs app-tabs" role="tablist" aria-label="Разделы программы">
+          <button class="tab is-active" type="button" data-app-tab="sales">Продажи</button>
+          <button class="tab" type="button" data-app-tab="reports">Отчеты</button>
+          <button class="tab" type="button" data-app-tab="settings">Настройки</button>
+        </nav>
       </div>
       <div class="header-date" id="currentDate"></div>
     </header>
 
     <main class="app-shell">
-      <section class="workbench">
+      <section class="app-tab-panel" data-app-panel="sales">
+        <section class="workbench">
         <section class="panel products-panel">
           <div class="panel-title">
             <h2>Продажа</h2>
@@ -167,8 +173,9 @@
           <small id="monthMeta">0 смен</small>
         </article>
       </section>
+      </section>
 
-      <section class="panel">
+      <section class="panel app-tab-panel" data-app-panel="reports" hidden>
         <div class="panel-title panel-title-actions">
           <div>
             <h2>Отчеты</h2>
@@ -252,7 +259,7 @@
         </div>
       </section>
 
-      <section class="panel settings-panel">
+      <section class="panel settings-panel app-tab-panel" data-app-panel="settings" hidden>
         <div class="panel-title">
           <div>
             <h2>Настройки</h2>

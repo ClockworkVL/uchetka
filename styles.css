@@ -69,6 +69,12 @@ select {
   padding: 28px clamp(18px, 4vw, 46px) 12px;
 }
 
+.header-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .app-header h1 {
   margin: 2px 0 0;
   font-size: clamp(28px, 4vw, 40px);
@@ -96,10 +102,19 @@ select {
   text-align: right;
 }
 
+.app-tabs {
+  margin-top: 8px;
+  justify-self: start;
+}
+
 .app-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 18px 0 38px;
+}
+
+.app-tab-panel[hidden] {
+  display: none;
 }
 
 .metrics-grid {
@@ -962,6 +977,11 @@ th.number {
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .header-main,
+  .app-tabs {
+    width: 100%;
   }
 
   .header-date {

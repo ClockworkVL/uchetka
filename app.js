@@ -28,6 +28,7 @@ const state = {
   shifts: loadFromStorage(STORAGE_KEYS.shifts, []),
   settings: normalizeSettings(loadFromStorage(STORAGE_KEYS.settings, DEFAULT_SETTINGS)),
   saleDraft: [],
+  activeAppTab: "sales",
   activeReport: "day",
   activeSettingsTab: "settings",
   editingProductName: null,
@@ -84,6 +85,8 @@ const elements = {
   reportTransferTotal: document.querySelector("#reportTransferTotal"),
   closedShiftsBody: document.querySelector("#closedShiftsBody"),
   productReportBody: document.querySelector("#productReportBody"),
+  appTabs: document.querySelectorAll("[data-app-tab]"),
+  appPanels: document.querySelectorAll("[data-app-panel]"),
   themeInputs: document.querySelectorAll('input[name="theme"]'),
   settingsTabs: document.querySelectorAll("[data-settings-tab]"),
   settingsPanels: document.querySelectorAll("[data-settings-panel]"),
@@ -145,6 +148,11 @@ elements.themeInputs.forEach((input) => {
 elements.companyNameInput.addEventListener("input", updateCompanyName);
 elements.checkUpdateButton.addEventListener("click", checkForAppUpdate);
 elements.installUpdateButton.addEventListener("click", installAppUpdate);
+elements.appTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    selectAppTab(tab.dataset.appTab);
+  });
+});
 elements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.activeReport = tab.dataset.report;
@@ -310,6 +318,7 @@ function savePersistentSnapshot() {
 
 function render() {
   elements.currentDate.textContent = dateFormatter.format(new Date());
+  renderAppTabs();
   renderMetrics();
   renderProducts();
   renderSaleDraft();
@@ -894,12 +903,14 @@ function startProductEdit(productName) {
     return;
   }
 
+  state.activeAppTab = "settings";
   state.activeSettingsTab = "product-base";
   state.editingProductName = product.name;
   elements.productBaseCategoryInput.value = product.category || "";
   elements.productBaseSubcategoryInput.value = product.subcategory || "";
   elements.productBaseNameInput.value = product.name;
   elements.productBasePriceInput.value = String(product.price);
+  renderAppTabs();
   renderSettingsTabs();
   renderProductBaseForm();
   showSettingsMessage(`Редактирование товара: ${product.name}`);
@@ -1295,6 +1306,22 @@ function normalizeSettings(settings) {
     : "";
 
   return { theme, companyName };
+}
+
+function selectAppTab(tabName) {
+  const knownTabs = new Set(["sales", "reports", "settings"]);
+  state.activeAppTab = knownTabs.has(tabName) ? tabName : "sales";
+  renderAppTabs();
+}
+
+function renderAppTabs() {
+  elements.appTabs.forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.appTab === state.activeAppTab);
+  });
+
+  elements.appPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.appPanel !== state.activeAppTab;
+  });
 }
 
 function selectSettingsTab(tabName) {
