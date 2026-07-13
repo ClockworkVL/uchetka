@@ -17,6 +17,7 @@ const PAYMENT_METHODS = {
   cash: "нал",
   transfer: "пер",
 };
+const DEFAULT_PRODUCT_CATEGORY = "Без категории";
 const DEFAULT_PAYMENT_METHOD = "cash";
 const PAYMENT_ORDER = ["eqv", "cash", "transfer"];
 const PERSISTENCE_VERSION = 1;
@@ -54,10 +55,12 @@ const elements = {
   clearSaleButton: document.querySelector("#clearSaleButton"),
   productsDatalist: document.querySelector("#productsDatalist"),
   categoriesDatalist: document.querySelector("#categoriesDatalist"),
+  subcategoriesDatalist: document.querySelector("#subcategoriesDatalist"),
   productsCounter: document.querySelector("#productsCounter"),
   productsList: document.querySelector("#productsList"),
   productBaseForm: document.querySelector("#productBaseForm"),
   productBaseCategoryInput: document.querySelector("#productBaseCategoryInput"),
+  productBaseSubcategoryInput: document.querySelector("#productBaseSubcategoryInput"),
   productBaseNameInput: document.querySelector("#productBaseNameInput"),
   productBasePriceInput: document.querySelector("#productBasePriceInput"),
   productBaseList: document.querySelector("#productBaseList"),
@@ -330,6 +333,7 @@ function renderProducts() {
   elements.productsCounter.textContent = String(state.products.length);
   elements.productsDatalist.innerHTML = "";
   elements.categoriesDatalist.innerHTML = "";
+  elements.subcategoriesDatalist.innerHTML = "";
   elements.productsList.innerHTML = "";
   elements.productBaseList.innerHTML = "";
 
@@ -346,6 +350,12 @@ function renderProducts() {
     elements.categoriesDatalist.append(option);
   });
 
+  getProductSubcategories().forEach((subcategory) => {
+    const option = document.createElement("option");
+    option.value = subcategory;
+    elements.subcategoriesDatalist.append(option);
+  });
+
   getProductsByCategory().forEach((group) => {
     const section = document.createElement("details");
     section.className = "product-category";
@@ -354,15 +364,19 @@ function renderProducts() {
       <summary class="accordion-summary">
         <span class="accordion-arrow" aria-hidden="true"></span>
         <span>${escapeHtml(group.category)}</span>
-        <small>${group.products.length}</small>
+        <small>${group.count}</small>
       </summary>
       <div class="product-category-list"></div>
     `;
     const categoryList = section.querySelector(".product-category-list");
 
     group.products.forEach((product) => {
-      const row = createProductRow(product);
-      categoryList.append(row);
+      categoryList.append(createProductRow(product));
+    });
+
+    group.subcategories.forEach((subcategoryGroup) => {
+      const subcategorySection = createProductSubcategorySection(subcategoryGroup);
+      categoryList.append(subcategorySection);
     });
 
     elements.productsList.append(section);
@@ -382,29 +396,67 @@ function renderProductBaseList() {
   const groups = getProductsByCategory();
 
   elements.productBaseList.innerHTML = groups.map((group) => {
-    const rows = group.products.map((product) => {
-      return `
-        <div class="product-base-row">
-          <div>
-            <strong>${escapeHtml(product.name)}</strong>
-            <span>${formatMoney(product.price)}</span>
-          </div>
-          <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
-        </div>
-      `;
-    }).join("");
+    const rows = group.products.map(renderProductBaseRow).join("");
+    const subcategories = group.subcategories.map(renderProductBaseSubcategory).join("");
 
     return `
       <details class="product-base-category">
         <summary class="accordion-summary">
           <span class="accordion-arrow" aria-hidden="true"></span>
           <span>${escapeHtml(group.category)}</span>
-          <small>${group.products.length}</small>
+          <small>${group.count}</small>
         </summary>
-        <div class="product-base-category-list">${rows}</div>
+        <div class="product-base-category-list">${rows}${subcategories}</div>
       </details>
     `;
   }).join("");
+}
+
+function createProductSubcategorySection(subcategoryGroup) {
+  const section = document.createElement("details");
+  section.className = "product-subcategory";
+  section.open = false;
+  section.innerHTML = `
+    <summary class="accordion-summary subcategory-summary">
+      <span class="accordion-arrow" aria-hidden="true"></span>
+      <span>${escapeHtml(subcategoryGroup.subcategory)}</span>
+      <small>${subcategoryGroup.products.length}</small>
+    </summary>
+    <div class="product-subcategory-list"></div>
+  `;
+
+  const productList = section.querySelector(".product-subcategory-list");
+  subcategoryGroup.products.forEach((product) => {
+    productList.append(createProductRow(product));
+  });
+  return section;
+}
+
+function renderProductBaseSubcategory(subcategoryGroup) {
+  const rows = subcategoryGroup.products.map(renderProductBaseRow).join("");
+
+  return `
+    <details class="product-base-subcategory">
+      <summary class="accordion-summary subcategory-summary">
+        <span class="accordion-arrow" aria-hidden="true"></span>
+        <span>${escapeHtml(subcategoryGroup.subcategory)}</span>
+        <small>${subcategoryGroup.products.length}</small>
+      </summary>
+      <div class="product-base-subcategory-list">${rows}</div>
+    </details>
+  `;
+}
+
+function renderProductBaseRow(product) {
+  return `
+    <div class="product-base-row">
+      <div>
+        <strong>${escapeHtml(product.name)}</strong>
+        <span>${formatMoney(product.price)}</span>
+      </div>
+      <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
+    </div>
+  `;
 }
 
 function createProductRow(product) {
@@ -427,17 +479,41 @@ function getProductsByCategory() {
     .sort((firstProduct, secondProduct) => {
       const firstCategory = getProductCategory(firstProduct);
       const secondCategory = getProductCategory(secondProduct);
+      const firstSubcategory = getProductSubcategory(firstProduct);
+      const secondSubcategory = getProductSubcategory(secondProduct);
       return firstCategory.localeCompare(secondCategory, "ru-RU")
+        || firstSubcategory.localeCompare(secondSubcategory, "ru-RU")
         || firstProduct.name.localeCompare(secondProduct.name, "ru-RU");
     })
     .forEach((product) => {
       const category = getProductCategory(product);
-      const group = groups.get(category) || { category, products: [] };
-      group.products.push(product);
+      const subcategory = getProductSubcategory(product);
+      const group = groups.get(category) || {
+        category,
+        count: 0,
+        products: [],
+        subcategories: new Map(),
+      };
+      if (subcategory) {
+        const subcategoryGroup = group.subcategories.get(subcategory) || {
+          subcategory,
+          products: [],
+        };
+        subcategoryGroup.products.push(product);
+        group.subcategories.set(subcategory, subcategoryGroup);
+      } else {
+        group.products.push(product);
+      }
+      group.count += 1;
       groups.set(category, group);
     });
 
-  return [...groups.values()];
+  return [...groups.values()].map((group) => ({
+    category: group.category,
+    count: group.count,
+    products: group.products,
+    subcategories: [...group.subcategories.values()],
+  }));
 }
 
 function getProductCategories() {
@@ -445,8 +521,19 @@ function getProductCategories() {
     .sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory, "ru-RU"));
 }
 
+function getProductSubcategories() {
+  return [...new Set(state.products
+    .map((product) => normalizeName(product.subcategory || ""))
+    .filter(Boolean))]
+    .sort((firstSubcategory, secondSubcategory) => firstSubcategory.localeCompare(secondSubcategory, "ru-RU"));
+}
+
 function getProductCategory(product) {
-  return normalizeName(product.category || "") || "Без категории";
+  return normalizeName(product.category || "") || DEFAULT_PRODUCT_CATEGORY;
+}
+
+function getProductSubcategory(product) {
+  return normalizeName(product.subcategory || "");
 }
 
 function renderSaleDraft() {
@@ -656,12 +743,13 @@ function addProductFromBase(event) {
     const productName = normalizeName(elements.productBaseNameInput.value);
     const price = parsePositiveNumber(elements.productBasePriceInput.value, "Укажите цену товара");
     const category = normalizeName(elements.productBaseCategoryInput.value);
+    const subcategory = normalizeName(elements.productBaseSubcategoryInput.value);
 
     if (!productName) {
       throw new Error("Укажите название товара");
     }
 
-    upsertProduct(productName, price, category);
+    upsertProduct(productName, price, category, subcategory);
     elements.productBaseNameInput.value = "";
     elements.productBasePriceInput.value = "";
     elements.productBaseNameInput.focus();
@@ -840,16 +928,22 @@ function fillPriceFromProduct() {
   }
 }
 
-function upsertProduct(name, price, category = null) {
+function upsertProduct(name, price, category = null, subcategory = null) {
   const product = findProduct(name);
   const normalizedCategory = category === null
     ? null
     : normalizeName(category);
+  const normalizedSubcategory = subcategory === null
+    ? null
+    : normalizeName(subcategory);
 
   if (product) {
     product.price = price;
     if (normalizedCategory !== null) {
       product.category = normalizedCategory;
+    }
+    if (normalizedSubcategory !== null) {
+      product.subcategory = normalizedSubcategory;
     }
     product.updatedAt = new Date().toISOString();
   } else {
@@ -858,6 +952,7 @@ function upsertProduct(name, price, category = null) {
       name,
       price,
       category: normalizedCategory || "",
+      subcategory: normalizedSubcategory || "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

@@ -413,13 +413,17 @@ select:focus {
 }
 
 .product-category-list,
-.product-base-category-list {
+.product-subcategory-list,
+.product-base-category-list,
+.product-base-subcategory-list {
   display: grid;
   gap: 8px;
 }
 
 .product-category,
+.product-subcategory,
 .product-base-category,
+.product-base-subcategory,
 .sale-group {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -427,11 +431,24 @@ select:focus {
   overflow: hidden;
 }
 
-.product-category-list {
+.product-subcategory,
+.product-base-subcategory {
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.product-category-list,
+.product-base-category-list {
+  gap: 10px;
+}
+
+.product-category-list,
+.product-subcategory-list {
   padding: 0 10px 10px;
 }
 
-.product-base-category-list {
+.product-base-category-list,
+.product-base-subcategory-list {
   padding: 0 10px 10px;
 }
 
@@ -448,6 +465,12 @@ select:focus {
 
 .accordion-summary {
   grid-template-columns: 18px minmax(0, 1fr) auto;
+}
+
+.subcategory-summary {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 14px;
 }
 
 .accordion-summary::-webkit-details-marker,
@@ -792,7 +815,7 @@ th.number {
 
 .product-base-form {
   display: grid;
-  grid-template-columns: minmax(170px, 0.8fr) minmax(220px, 1.2fr) minmax(120px, 0.5fr) auto;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(150px, 0.75fr) minmax(220px, 1.2fr) minmax(120px, 0.5fr) auto;
   gap: 12px;
   align-items: end;
   margin-top: 16px;
