@@ -4,6 +4,12 @@ const STORAGE_KEYS = {
   products: "sales-accounting.products",
   currentSales: "sales-accounting.current-sales",
   shifts: "sales-accounting.shifts",
+  settings: "sales-accounting.settings",
+};
+
+const DEFAULT_SETTINGS = {
+  theme: "light",
+  companyName: "",
 };
 
 const PAYMENT_METHODS = {
@@ -18,12 +24,14 @@ const state = {
   products: loadFromStorage(STORAGE_KEYS.products, []),
   currentSales: loadFromStorage(STORAGE_KEYS.currentSales, []),
   shifts: loadFromStorage(STORAGE_KEYS.shifts, []),
+  settings: normalizeSettings(loadFromStorage(STORAGE_KEYS.settings, DEFAULT_SETTINGS)),
   saleDraft: [],
   activeReport: "day",
 };
 
 const elements = {
   currentDate: document.querySelector("#currentDate"),
+  companyDisplay: document.querySelector("#companyDisplay"),
   currentShiftTotal: document.querySelector("#currentShiftTotal"),
   currentShiftMeta: document.querySelector("#currentShiftMeta"),
   dayTotal: document.querySelector("#dayTotal"),
@@ -48,6 +56,8 @@ const elements = {
   formMessage: document.querySelector("#formMessage"),
   shiftSubtitle: document.querySelector("#shiftSubtitle"),
   closeShiftButton: document.querySelector("#closeShiftButton"),
+  receiptSaleSelect: document.querySelector("#receiptSaleSelect"),
+  printReceiptButton: document.querySelector("#printReceiptButton"),
   currentSalesBody: document.querySelector("#currentSalesBody"),
   emptyShift: document.querySelector("#emptyShift"),
   tabs: document.querySelectorAll("[data-report]"),
@@ -61,6 +71,9 @@ const elements = {
   reportTransferTotal: document.querySelector("#reportTransferTotal"),
   closedShiftsBody: document.querySelector("#closedShiftsBody"),
   productReportBody: document.querySelector("#productReportBody"),
+  themeInputs: document.querySelectorAll('input[name="theme"]'),
+  companyNameInput: document.querySelector("#companyNameInput"),
+  settingsMessage: document.querySelector("#settingsMessage"),
 };
 
 const moneyFormatter = new Intl.NumberFormat("ru-RU", {
@@ -104,6 +117,11 @@ elements.clearSaleButton.addEventListener("click", clearSaleDraft);
 elements.productsList.addEventListener("click", handleProductClick);
 elements.currentSalesBody.addEventListener("click", handleCurrentSaleClick);
 elements.closeShiftButton.addEventListener("click", closeShift);
+elements.printReceiptButton.addEventListener("click", printSelectedReceipt);
+elements.themeInputs.forEach((input) => {
+  input.addEventListener("change", () => updateTheme(input.value));
+});
+elements.companyNameInput.addEventListener("input", updateCompanyName);
 elements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.activeReport = tab.dataset.report;
@@ -111,6 +129,7 @@ elements.tabs.forEach((tab) => {
   });
 });
 
+applySettings();
 render();
 
 function loadFromStorage(key, fallback) {
@@ -215,6 +234,7 @@ function renderCurrentSales() {
   elements.currentSalesBody.innerHTML = "";
   elements.closeShiftButton.disabled = state.currentSales.length === 0;
   elements.emptyShift.classList.toggle("is-visible", state.currentSales.length === 0);
+  renderReceiptSelector();
 
   if (state.currentSales.length === 0) {
     elements.shiftSubtitle.textContent = "Продажи еще не добавлены";
@@ -240,6 +260,35 @@ function renderCurrentSales() {
     `;
     elements.currentSalesBody.append(row);
   });
+}
+
+function renderReceiptSelector() {
+  const previousValue = elements.receiptSaleSelect.value;
+  const groups = getCurrentSaleGroups();
+  elements.receiptSaleSelect.innerHTML = "";
+  elements.receiptSaleSelect.disabled = groups.length === 0;
+  elements.printReceiptButton.disabled = groups.length === 0;
+
+  if (groups.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "Нет продаж";
+    elements.receiptSaleSelect.append(option);
+    return;
+  }
+
+  groups.forEach((group) => {
+    const summary = summarizeSales(group.sales);
+    const option = document.createElement("option");
+    option.value = group.id;
+    option.textContent = `Продажа ${formatSaleNumber(group.saleNumber)} — ${formatMoney(summary.total)}`;
+    elements.receiptSaleSelect.append(option);
+  });
+
+  const hasPreviousValue = groups.some((group) => group.id === previousValue);
+  elements.receiptSaleSelect.value = hasPreviousValue
+    ? previousValue
+    : groups[groups.length - 1].id;
 }
 
 function renderReport() {
@@ -373,6 +422,33 @@ function clearSaleDraft() {
   state.saleDraft = [];
   showMessage("Позиции продажи очищены");
   render();
+}
+
+function printSelectedReceipt() {
+  const group = getCurrentSaleGroups().find((item) => {
+    return item.id === elements.receiptSaleSelect.value;
+  });
+
+  if (!group) {
+    showMessage("Выберите продажу для печати", true);
+    return;
+  }
+
+  const receiptWindow = window.open("", "receipt-print", "width=760,height=900");
+
+  if (!receiptWindow) {
+    showMessage("Разрешите всплывающие окна для печати чека", true);
+    return;
+  }
+
+  receiptWindow.document.open();
+  receiptWindow.document.write(buildReceiptHtml(group));
+  receiptWindow.document.close();
+  receiptWindow.focus();
+
+  setTimeout(() => {
+    receiptWindow.print();
+  }, 250);
 }
 
 function closeShift() {
@@ -554,6 +630,219 @@ function getRange(period) {
     end: now,
     label: labels[period],
   };
+}
+
+function getCurrentSaleGroups() {
+  const groups = new Map();
+
+  state.currentSales.forEach((sale) => {
+    const groupId = sale.saleGroupId || sale.id;
+    const group = groups.get(groupId) || {
+      id: groupId,
+      saleNumber: Number(sale.saleNumber) || groups.size + 1,
+      createdAt: sale.createdAt,
+      paymentMethod: getPaymentMethod(sale.paymentMethod),
+      sales: [],
+    };
+
+    group.sales.push(sale);
+    groups.set(groupId, group);
+  });
+
+  return [...groups.values()].sort((firstGroup, secondGroup) => {
+    return firstGroup.saleNumber - secondGroup.saleNumber
+      || new Date(firstGroup.createdAt) - new Date(secondGroup.createdAt);
+  });
+}
+
+function buildReceiptHtml(group) {
+  const summary = summarizeSales(group.sales);
+  const companyName = state.settings.companyName || "Компания не указана";
+  const paymentMethod = getPaymentLabel(group.paymentMethod);
+  const createdAt = dateTimeFormatter.format(new Date(group.createdAt));
+  const rows = group.sales.map((sale, index) => {
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(sale.productName)}</td>
+        <td class="number">${formatNumber(sale.quantity)}</td>
+        <td class="number">${formatMoney(sale.price)}</td>
+        <td class="number">${formatMoney(sale.total)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  return `
+    <!doctype html>
+    <html lang="ru">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Товарный чек ${formatSaleNumber(group.saleNumber)}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            background: #f4f4f4;
+            color: #111;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+          }
+          .receipt {
+            width: min(720px, calc(100% - 32px));
+            margin: 20px auto;
+            background: #fff;
+            border: 1px solid #d0d0d0;
+            padding: 28px;
+          }
+          h1 {
+            margin: 0 0 12px;
+            font-size: 24px;
+            text-align: center;
+            text-transform: uppercase;
+          }
+          .company {
+            margin-bottom: 18px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+          }
+          .meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 18px;
+            margin-bottom: 18px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+          }
+          th,
+          td {
+            border: 1px solid #c8c8c8;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background: #efefef;
+          }
+          .number {
+            text-align: right;
+            white-space: nowrap;
+          }
+          .totals {
+            display: grid;
+            justify-content: end;
+            gap: 8px;
+            margin-bottom: 24px;
+          }
+          .total-line {
+            display: grid;
+            grid-template-columns: 150px 150px;
+            gap: 12px;
+            font-weight: 700;
+          }
+          .signature {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            margin-top: 34px;
+          }
+          .signature-line {
+            border-top: 1px solid #111;
+            padding-top: 6px;
+            text-align: center;
+          }
+          @media print {
+            body { background: #fff; }
+            .receipt {
+              width: 100%;
+              margin: 0;
+              border: 0;
+              padding: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <main class="receipt">
+          <h1>Товарный чек ${formatSaleNumber(group.saleNumber)}</h1>
+          <div class="company">${escapeHtml(companyName)}</div>
+          <div class="meta">
+            <div><strong>Дата:</strong> ${escapeHtml(createdAt)}</div>
+            <div><strong>Оплата:</strong> ${escapeHtml(paymentMethod)}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Наименование товара</th>
+                <th>Кол-во</th>
+                <th>Цена</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div class="totals">
+            <div class="total-line">
+              <span>Итого:</span>
+              <span class="number">${formatMoney(summary.total)}</span>
+            </div>
+          </div>
+          <div class="signature">
+            <div class="signature-line">Продавец</div>
+            <div class="signature-line">Подпись</div>
+          </div>
+        </main>
+      </body>
+    </html>
+  `;
+}
+
+function normalizeSettings(settings) {
+  const theme = settings?.theme === "dark" ? "dark" : "light";
+  const companyName = typeof settings?.companyName === "string"
+    ? settings.companyName.trim()
+    : "";
+
+  return { theme, companyName };
+}
+
+function saveSettings() {
+  saveToStorage(STORAGE_KEYS.settings, state.settings);
+}
+
+function applySettings(options = {}) {
+  const shouldSyncInputs = options.syncInputs !== false;
+  document.documentElement.dataset.theme = state.settings.theme;
+  elements.companyDisplay.textContent = state.settings.companyName;
+  elements.companyDisplay.hidden = !state.settings.companyName;
+
+  if (shouldSyncInputs) {
+    elements.themeInputs.forEach((input) => {
+      input.checked = input.value === state.settings.theme;
+    });
+    elements.companyNameInput.value = state.settings.companyName;
+  }
+}
+
+function updateTheme(theme) {
+  state.settings.theme = theme === "dark" ? "dark" : "light";
+  saveSettings();
+  applySettings();
+  showSettingsMessage("Тема сохранена");
+}
+
+function updateCompanyName() {
+  state.settings.companyName = normalizeName(elements.companyNameInput.value);
+  saveSettings();
+  applySettings({ syncInputs: false });
+  showSettingsMessage("Название компании сохранено");
+}
+
+function showSettingsMessage(message) {
+  elements.settingsMessage.textContent = message;
 }
 
 function summarizeSales(sales) {

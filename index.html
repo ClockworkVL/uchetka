@@ -11,6 +11,7 @@
       <div>
         <p class="eyebrow">Учетка</p>
         <h1>Учет продаж</h1>
+        <p class="company-display" id="companyDisplay"></p>
       </div>
       <div class="header-date" id="currentDate"></div>
     </header>
@@ -128,9 +129,15 @@
             <h2>Текущая смена</h2>
             <p id="shiftSubtitle">Продажи еще не добавлены</p>
           </div>
-          <button class="button button-danger" id="closeShiftButton" type="button">
-            Закрыть смену
-          </button>
+          <div class="shift-actions">
+            <select id="receiptSaleSelect" aria-label="Выбор продажи для печати"></select>
+            <button class="button button-light" id="printReceiptButton" type="button">
+              Печать чека
+            </button>
+            <button class="button button-danger" id="closeShiftButton" type="button">
+              Закрыть смену
+            </button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -257,6 +264,40 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="panel settings-panel">
+        <div class="panel-title">
+          <div>
+            <h2>Настройки</h2>
+            <p>Оформление и данные для товарного чека</p>
+          </div>
+        </div>
+        <div class="settings-grid">
+          <div class="settings-block">
+            <span class="settings-label">Тема</span>
+            <div class="theme-options" role="radiogroup" aria-label="Выбор темы">
+              <label class="theme-option">
+                <input type="radio" name="theme" value="light" checked />
+                <span>Светлая</span>
+              </label>
+              <label class="theme-option">
+                <input type="radio" name="theme" value="dark" />
+                <span>Темная</span>
+              </label>
+            </div>
+          </div>
+          <label class="settings-block">
+            Название компании
+            <input
+              id="companyNameInput"
+              type="text"
+              placeholder="Например: ИП Иванов"
+              autocomplete="organization"
+            />
+          </label>
+        </div>
+        <p class="settings-message" id="settingsMessage" aria-live="polite"></p>
       </section>
     </main>
 
