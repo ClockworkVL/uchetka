@@ -437,6 +437,7 @@ function renderProductBaseRow(product) {
         <strong>${escapeHtml(product.name)}</strong>
         <span>${formatMoney(product.price)}</span>
       </div>
+      <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Изменить цену" aria-label="Изменить цену товара">₽</button>
       <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
     </div>
   `;
@@ -450,6 +451,7 @@ function createProductRow(product) {
       <span class="product-name">${escapeHtml(product.name)}</span>
       <span class="product-price">${formatMoney(product.price)}</span>
     </button>
+    <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Изменить цену" aria-label="Изменить цену товара">₽</button>
     <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
   `;
   return row;
@@ -824,7 +826,13 @@ function closeShift() {
 
 function handleProductClick(event) {
   const pickButton = event.target.closest("[data-product]");
+  const editButton = event.target.closest("[data-edit-product]");
   const deleteButton = event.target.closest("[data-delete-product]");
+
+  if (editButton) {
+    editProductPrice(editButton.dataset.editProduct, event.target);
+    return;
+  }
 
   if (pickButton) {
     const product = findProduct(pickButton.dataset.product);
@@ -852,6 +860,47 @@ function handleProductClick(event) {
     saveToStorage(STORAGE_KEYS.products, state.products);
     render();
   }
+}
+
+function editProductPrice(productName, target) {
+  const product = findProduct(productName);
+  const isProductBaseList = Boolean(target?.closest("#productBaseList"));
+
+  if (!product) {
+    showProductEditMessage("Товар не найден", true, isProductBaseList);
+    return;
+  }
+
+  const value = prompt(`Новая цена для "${product.name}"`, String(product.price).replace(".", ","));
+
+  if (value === null) {
+    return;
+  }
+
+  try {
+    const price = parsePositiveNumber(value, "Укажите корректную цену");
+    product.price = roundMoney(price);
+    product.updatedAt = new Date().toISOString();
+    saveToStorage(STORAGE_KEYS.products, state.products);
+
+    if (normalizeName(elements.productInput.value).toLocaleLowerCase("ru-RU") === product.name.toLocaleLowerCase("ru-RU")) {
+      elements.priceInput.value = String(product.price);
+    }
+
+    render();
+    showProductEditMessage(`Цена обновлена: ${product.name} — ${formatMoney(product.price)}`, false, isProductBaseList);
+  } catch (error) {
+    showProductEditMessage(error.message, true, isProductBaseList);
+  }
+}
+
+function showProductEditMessage(message, isError, isProductBaseList) {
+  if (isProductBaseList) {
+    showSettingsMessage(message);
+    return;
+  }
+
+  showMessage(message, isError);
 }
 
 function handleCurrentSaleClick(event) {

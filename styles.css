@@ -514,7 +514,7 @@ details[open] > summary .accordion-arrow {
 
 .product-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1fr) 36px 36px;
   gap: 8px;
   align-items: center;
 }
@@ -551,6 +551,7 @@ details[open] > summary .accordion-arrow {
   white-space: nowrap;
 }
 
+.product-edit,
 .product-delete,
 .icon-button {
   display: inline-flex;
@@ -563,6 +564,18 @@ details[open] > summary .accordion-arrow {
   color: var(--danger);
   font-size: 20px;
   line-height: 1;
+}
+
+.product-edit {
+  background: var(--selected);
+  color: var(--primary-dark);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.product-edit:hover {
+  border-color: var(--primary);
+  background: var(--selected);
 }
 
 .product-delete:hover,
@@ -832,7 +845,7 @@ th.number {
 
 .product-base-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px;
+  grid-template-columns: minmax(0, 1fr) 36px 36px;
   gap: 8px;
   align-items: center;
   border: 1px solid var(--line);
