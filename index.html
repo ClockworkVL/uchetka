@@ -259,44 +259,53 @@
             <p>Оформление и данные для товарного чека</p>
           </div>
         </div>
-        <div class="settings-grid">
-          <div class="settings-block">
-            <span class="settings-label">Тема</span>
-            <div class="theme-options" role="radiogroup" aria-label="Выбор темы">
-              <label class="theme-option">
-                <input type="radio" name="theme" value="light" checked />
-                <span>Светлая</span>
-              </label>
-              <label class="theme-option">
-                <input type="radio" name="theme" value="dark" />
-                <span>Темная</span>
-              </label>
+        <div class="tabs settings-tabs" role="tablist" aria-label="Раздел настроек">
+          <button class="tab is-active" type="button" data-settings-tab="settings">Настройки</button>
+          <button class="tab" type="button" data-settings-tab="product-base">База товаров</button>
+        </div>
+        <div class="settings-tab-panel" data-settings-panel="settings">
+          <div class="settings-grid">
+            <div class="settings-block">
+              <span class="settings-label">Тема</span>
+              <div class="theme-options" role="radiogroup" aria-label="Выбор темы">
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="light" checked />
+                  <span>Светлая</span>
+                </label>
+                <label class="theme-option">
+                  <input type="radio" name="theme" value="dark" />
+                  <span>Темная</span>
+                </label>
+              </div>
             </div>
-          </div>
-          <label class="settings-block">
-            Название компании
-            <input
-              id="companyNameInput"
-              type="text"
-              placeholder="Например: ИП Иванов"
-              autocomplete="organization"
-            />
-          </label>
-          <div class="settings-block update-block">
-            <span class="settings-label">Обновления</span>
-            <div class="update-actions">
-              <button class="button button-light" id="checkUpdateButton" type="button">
-                Проверить обновление
-              </button>
-              <button class="button button-primary" id="installUpdateButton" type="button" disabled>
-                Обновить
-              </button>
+            <label class="settings-block">
+              Название компании
+              <input
+                id="companyNameInput"
+                type="text"
+                placeholder="Например: ИП Иванов"
+                autocomplete="organization"
+              />
+            </label>
+            <div class="settings-block update-block">
+              <span class="settings-label">Обновления</span>
+              <div class="update-actions">
+                <button class="button button-light" id="checkUpdateButton" type="button">
+                  Проверить обновление
+                </button>
+                <button class="button button-primary" id="installUpdateButton" type="button" disabled>
+                  Обновить
+                </button>
+              </div>
+              <span class="update-status" id="updateStatus">Готово к проверке</span>
             </div>
-            <span class="update-status" id="updateStatus">Готово к проверке</span>
           </div>
         </div>
-        <details class="product-base">
-          <summary>База товаров</summary>
+        <div class="settings-tab-panel product-base" data-settings-panel="product-base" hidden>
+          <div class="product-base-heading">
+            <h3>База товаров</h3>
+            <p>Добавляйте товары вручную или редактируйте выбранный товар из каталога.</p>
+          </div>
           <form class="product-base-form" id="productBaseForm">
             <label>
               Категория
@@ -338,12 +347,17 @@
                 required
               />
             </label>
-            <button class="button button-primary" type="submit">
-              Добавить в базу
-            </button>
+            <div class="product-base-actions">
+              <button class="button button-primary" id="productBaseSubmitButton" type="submit">
+                Добавить в базу
+              </button>
+              <button class="button button-light" id="cancelProductEditButton" type="button" hidden>
+                Отмена
+              </button>
+            </div>
           </form>
           <div class="product-base-list" id="productBaseList"></div>
-        </details>
+        </div>
         <p class="settings-message" id="settingsMessage" aria-live="polite"></p>
       </section>
     </main>

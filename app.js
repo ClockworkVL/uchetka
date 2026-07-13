@@ -29,6 +29,8 @@ const state = {
   settings: normalizeSettings(loadFromStorage(STORAGE_KEYS.settings, DEFAULT_SETTINGS)),
   saleDraft: [],
   activeReport: "day",
+  activeSettingsTab: "settings",
+  editingProductName: null,
 };
 let persistentSaveTimer = null;
 
@@ -61,6 +63,8 @@ const elements = {
   productBaseSubcategoryInput: document.querySelector("#productBaseSubcategoryInput"),
   productBaseNameInput: document.querySelector("#productBaseNameInput"),
   productBasePriceInput: document.querySelector("#productBasePriceInput"),
+  productBaseSubmitButton: document.querySelector("#productBaseSubmitButton"),
+  cancelProductEditButton: document.querySelector("#cancelProductEditButton"),
   productBaseList: document.querySelector("#productBaseList"),
   formMessage: document.querySelector("#formMessage"),
   shiftSubtitle: document.querySelector("#shiftSubtitle"),
@@ -81,6 +85,8 @@ const elements = {
   closedShiftsBody: document.querySelector("#closedShiftsBody"),
   productReportBody: document.querySelector("#productReportBody"),
   themeInputs: document.querySelectorAll('input[name="theme"]'),
+  settingsTabs: document.querySelectorAll("[data-settings-tab]"),
+  settingsPanels: document.querySelectorAll("[data-settings-panel]"),
   companyNameInput: document.querySelector("#companyNameInput"),
   checkUpdateButton: document.querySelector("#checkUpdateButton"),
   installUpdateButton: document.querySelector("#installUpdateButton"),
@@ -127,6 +133,7 @@ elements.saleCartBody.addEventListener("click", handleSaleDraftClick);
 elements.commitSaleButton.addEventListener("click", commitSaleDraft);
 elements.clearSaleButton.addEventListener("click", clearSaleDraft);
 elements.productBaseForm.addEventListener("submit", addProductFromBase);
+elements.cancelProductEditButton.addEventListener("click", cancelProductEdit);
 elements.productsList.addEventListener("click", handleProductClick);
 elements.productBaseList.addEventListener("click", handleProductClick);
 elements.currentSalesBody.addEventListener("click", handleCurrentSaleClick);
@@ -142,6 +149,11 @@ elements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.activeReport = tab.dataset.report;
     render();
+  });
+});
+elements.settingsTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    selectSettingsTab(tab.dataset.settingsTab);
   });
 });
 
@@ -303,6 +315,8 @@ function render() {
   renderSaleDraft();
   renderCurrentSales();
   renderReport();
+  renderSettingsTabs();
+  renderProductBaseForm();
 }
 
 function renderMetrics() {
@@ -437,7 +451,7 @@ function renderProductBaseRow(product) {
         <strong>${escapeHtml(product.name)}</strong>
         <span>${formatMoney(product.price)}</span>
       </div>
-      <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Изменить цену" aria-label="Изменить цену товара">₽</button>
+      <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Редактировать товар" aria-label="Редактировать товар">✎</button>
       <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
     </div>
   `;
@@ -451,7 +465,7 @@ function createProductRow(product) {
       <span class="product-name">${escapeHtml(product.name)}</span>
       <span class="product-price">${formatMoney(product.price)}</span>
     </button>
-    <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Изменить цену" aria-label="Изменить цену товара">₽</button>
+    <button class="product-edit" type="button" data-edit-product="${escapeAttribute(product.name)}" title="Редактировать товар" aria-label="Редактировать товар">✎</button>
     <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
   `;
   return row;
@@ -722,11 +736,21 @@ function addProductFromBase(event) {
       throw new Error("Укажите название товара");
     }
 
-    upsertProduct(productName, price, category, subcategory);
-    elements.productBaseNameInput.value = "";
-    elements.productBasePriceInput.value = "";
-    elements.productBaseNameInput.focus();
-    showSettingsMessage(`Товар добавлен в базу: ${productName}`);
+    if (state.editingProductName) {
+      updateProduct(state.editingProductName, {
+        name: productName,
+        price,
+        category,
+        subcategory,
+      });
+      state.editingProductName = null;
+      clearProductBaseForm({ focusName: false });
+      showSettingsMessage(`Товар обновлен: ${productName}`);
+    } else {
+      upsertProduct(productName, price, category, subcategory);
+      clearProductBaseForm();
+      showSettingsMessage(`Товар добавлен в базу: ${productName}`);
+    }
     render();
   } catch (error) {
     showSettingsMessage(error.message);
@@ -830,7 +854,7 @@ function handleProductClick(event) {
   const deleteButton = event.target.closest("[data-delete-product]");
 
   if (editButton) {
-    editProductPrice(editButton.dataset.editProduct, event.target);
+    startProductEdit(editButton.dataset.editProduct);
     return;
   }
 
@@ -862,45 +886,35 @@ function handleProductClick(event) {
   }
 }
 
-function editProductPrice(productName, target) {
+function startProductEdit(productName) {
   const product = findProduct(productName);
-  const isProductBaseList = Boolean(target?.closest("#productBaseList"));
 
   if (!product) {
-    showProductEditMessage("Товар не найден", true, isProductBaseList);
+    showSettingsMessage("Товар не найден");
     return;
   }
 
-  const value = prompt(`Новая цена для "${product.name}"`, String(product.price).replace(".", ","));
+  state.activeSettingsTab = "product-base";
+  state.editingProductName = product.name;
+  elements.productBaseCategoryInput.value = product.category || "";
+  elements.productBaseSubcategoryInput.value = product.subcategory || "";
+  elements.productBaseNameInput.value = product.name;
+  elements.productBasePriceInput.value = String(product.price);
+  renderSettingsTabs();
+  renderProductBaseForm();
+  showSettingsMessage(`Редактирование товара: ${product.name}`);
 
-  if (value === null) {
-    return;
-  }
-
-  try {
-    const price = parsePositiveNumber(value, "Укажите корректную цену");
-    product.price = roundMoney(price);
-    product.updatedAt = new Date().toISOString();
-    saveToStorage(STORAGE_KEYS.products, state.products);
-
-    if (normalizeName(elements.productInput.value).toLocaleLowerCase("ru-RU") === product.name.toLocaleLowerCase("ru-RU")) {
-      elements.priceInput.value = String(product.price);
-    }
-
-    render();
-    showProductEditMessage(`Цена обновлена: ${product.name} — ${formatMoney(product.price)}`, false, isProductBaseList);
-  } catch (error) {
-    showProductEditMessage(error.message, true, isProductBaseList);
-  }
+  window.setTimeout(() => {
+    elements.productBaseNameInput.focus();
+    elements.productBaseForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 0);
 }
 
-function showProductEditMessage(message, isError, isProductBaseList) {
-  if (isProductBaseList) {
-    showSettingsMessage(message);
-    return;
-  }
-
-  showMessage(message, isError);
+function cancelProductEdit() {
+  state.editingProductName = null;
+  clearProductBaseForm();
+  renderProductBaseForm();
+  showSettingsMessage("Редактирование отменено");
 }
 
 function handleCurrentSaleClick(event) {
@@ -982,6 +996,61 @@ function upsertProduct(name, price, category = null, subcategory = null) {
     return firstProduct.name.localeCompare(secondProduct.name, "ru-RU");
   });
   saveToStorage(STORAGE_KEYS.products, state.products);
+}
+
+function updateProduct(currentName, changes) {
+  const product = findProduct(currentName);
+
+  if (!product) {
+    throw new Error("Товар не найден");
+  }
+
+  const nextName = normalizeName(changes.name);
+  const nextCategory = normalizeName(changes.category || "");
+  const nextSubcategory = normalizeName(changes.subcategory || "");
+  const currentNameLower = product.name.toLocaleLowerCase("ru-RU");
+  const nextNameLower = nextName.toLocaleLowerCase("ru-RU");
+  const duplicate = state.products.find((item) => {
+    return item.name.toLocaleLowerCase("ru-RU") === nextNameLower
+      && item.name.toLocaleLowerCase("ru-RU") !== currentNameLower;
+  });
+
+  if (!nextName) {
+    throw new Error("Укажите название товара");
+  }
+
+  if (duplicate) {
+    throw new Error("Товар с таким названием уже есть");
+  }
+
+  product.name = nextName;
+  product.price = roundMoney(changes.price);
+  product.category = nextCategory;
+  product.subcategory = nextSubcategory;
+  product.updatedAt = new Date().toISOString();
+
+  state.products.sort((firstProduct, secondProduct) => {
+    return firstProduct.name.localeCompare(secondProduct.name, "ru-RU");
+  });
+
+  if (normalizeName(elements.productInput.value).toLocaleLowerCase("ru-RU") === currentNameLower) {
+    elements.productInput.value = product.name;
+    elements.priceInput.value = String(product.price);
+  }
+
+  saveToStorage(STORAGE_KEYS.products, state.products);
+}
+
+function clearProductBaseForm(options = {}) {
+  const shouldFocusName = options.focusName !== false;
+  elements.productBaseCategoryInput.value = "";
+  elements.productBaseSubcategoryInput.value = "";
+  elements.productBaseNameInput.value = "";
+  elements.productBasePriceInput.value = "";
+
+  if (shouldFocusName) {
+    elements.productBaseNameInput.focus();
+  }
 }
 
 function clearProductInputs() {
@@ -1226,6 +1295,34 @@ function normalizeSettings(settings) {
     : "";
 
   return { theme, companyName };
+}
+
+function selectSettingsTab(tabName) {
+  state.activeSettingsTab = tabName === "product-base" ? "product-base" : "settings";
+  renderSettingsTabs();
+}
+
+function renderSettingsTabs() {
+  elements.settingsTabs.forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.settingsTab === state.activeSettingsTab);
+  });
+
+  elements.settingsPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.settingsPanel !== state.activeSettingsTab;
+  });
+}
+
+function renderProductBaseForm() {
+  if (state.editingProductName && !findProduct(state.editingProductName)) {
+    state.editingProductName = null;
+    clearProductBaseForm({ focusName: false });
+  }
+
+  const isEditing = Boolean(state.editingProductName);
+  elements.productBaseSubmitButton.textContent = isEditing
+    ? "Сохранить изменения"
+    : "Добавить в базу";
+  elements.cancelProductEditButton.hidden = !isEditing;
 }
 
 function saveSettings() {
