@@ -206,10 +206,15 @@ function renderProducts() {
   });
 
   getProductsByCategory().forEach((group) => {
-    const section = document.createElement("section");
+    const section = document.createElement("details");
     section.className = "product-category";
+    section.open = false;
     section.innerHTML = `
-      <h3>${escapeHtml(group.category)}</h3>
+      <summary class="accordion-summary">
+        <span class="accordion-arrow" aria-hidden="true"></span>
+        <span>${escapeHtml(group.category)}</span>
+        <small>${group.products.length}</small>
+      </summary>
       <div class="product-category-list"></div>
     `;
     const categoryList = section.querySelector(".product-category-list");
@@ -337,21 +342,38 @@ function renderCurrentSales() {
   const firstSale = state.currentSales[0];
   elements.shiftSubtitle.textContent = `${formatMeta(summary.lineCount, summary.quantity)}, ${formatMoney(summary.total)}, начало ${timeFormatter.format(new Date(firstSale.createdAt))}`;
 
-  state.currentSales.forEach((sale) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${formatSaleNumber(sale.saleNumber)}</td>
-      <td>${timeFormatter.format(new Date(sale.createdAt))}</td>
-      <td>${escapeHtml(sale.productName)}</td>
-      <td class="number">${formatMoney(sale.price)}</td>
-      <td class="number">${formatNumber(sale.quantity)}</td>
-      <td>${getPaymentLabel(sale.paymentMethod)}</td>
-      <td class="number">${formatMoney(sale.total)}</td>
-      <td class="number">
-        <button class="icon-button" type="button" data-delete-sale="${escapeAttribute(sale.id)}" aria-label="Удалить продажу">×</button>
-      </td>
+  getCurrentSaleGroups().forEach((group) => {
+    const groupSummary = summarizeSales(group.sales);
+    const details = document.createElement("details");
+    details.className = "sale-group";
+    details.innerHTML = `
+      <summary class="sale-group-summary">
+        <span class="accordion-arrow" aria-hidden="true"></span>
+        <span class="sale-group-title">${formatSaleNumber(group.saleNumber)}</span>
+        <span class="sale-group-meta sale-group-time">${timeFormatter.format(new Date(group.createdAt))}</span>
+        <span class="sale-group-meta sale-group-count">${formatMeta(groupSummary.lineCount, groupSummary.quantity)}</span>
+        <span class="sale-group-meta sale-group-payment">${getPaymentLabel(group.paymentMethod)}</span>
+        <strong>${formatMoney(groupSummary.total)}</strong>
+        <button class="icon-button" type="button" data-delete-sale-group="${escapeAttribute(group.id)}" aria-label="Удалить продажу">×</button>
+      </summary>
+      <div class="sale-group-items"></div>
     `;
-    elements.currentSalesBody.append(row);
+    const items = details.querySelector(".sale-group-items");
+
+    group.sales.forEach((sale) => {
+      const item = document.createElement("div");
+      item.className = "sale-group-item";
+      item.innerHTML = `
+        <span class="sale-item-product">${escapeHtml(sale.productName)}</span>
+        <span>${formatMoney(sale.price)}</span>
+        <span>${formatNumber(sale.quantity)} шт.</span>
+        <strong>${formatMoney(sale.total)}</strong>
+        <button class="icon-button" type="button" data-delete-sale="${escapeAttribute(sale.id)}" aria-label="Удалить товар из продажи">×</button>
+      `;
+      items.append(item);
+    });
+
+    elements.currentSalesBody.append(details);
   });
 }
 
@@ -629,12 +651,26 @@ function handleProductClick(event) {
 }
 
 function handleCurrentSaleClick(event) {
+  const groupDeleteButton = event.target.closest("[data-delete-sale-group]");
   const deleteButton = event.target.closest("[data-delete-sale]");
+
+  if (groupDeleteButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    state.currentSales = state.currentSales.filter((sale) => {
+      return (sale.saleGroupId || sale.id) !== groupDeleteButton.dataset.deleteSaleGroup;
+    });
+    saveToStorage(STORAGE_KEYS.currentSales, state.currentSales);
+    render();
+    return;
+  }
 
   if (!deleteButton) {
     return;
   }
 
+  event.preventDefault();
+  event.stopPropagation();
   state.currentSales = state.currentSales.filter((sale) => sale.id !== deleteButton.dataset.deleteSale);
   saveToStorage(STORAGE_KEYS.currentSales, state.currentSales);
   render();

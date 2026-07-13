@@ -18,7 +18,7 @@
 
     <main class="app-shell">
       <section class="workbench">
-        <section class="panel">
+        <section class="panel products-panel">
           <div class="panel-title">
             <h2>Продажа</h2>
           </div>
@@ -139,22 +139,8 @@
             </button>
           </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Продажа</th>
-                <th>Время</th>
-                <th>Товар</th>
-                <th>Цена</th>
-                <th>Кол-во</th>
-                <th>Оплата</th>
-                <th>Сумма</th>
-                <th aria-label="Действия"></th>
-              </tr>
-            </thead>
-            <tbody id="currentSalesBody"></tbody>
-          </table>
+        <div class="sales-list-wrap">
+          <div class="sales-list" id="currentSalesBody"></div>
           <div class="empty-state" id="emptyShift">Продаж пока нет</div>
         </div>
       </section>
