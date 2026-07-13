@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Учет продаж</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Учетка</p>
+        <h1>Учет продаж</h1>
+      </div>
+      <div class="header-date" id="currentDate"></div>
+    </header>
+
+    <main class="app-shell">
+      <section class="metrics-grid" aria-label="Сводка">
+        <article class="metric">
+          <span>Смена</span>
+          <strong id="currentShiftTotal">0 ₽</strong>
+          <small id="currentShiftMeta">0 позиций</small>
+        </article>
+        <article class="metric">
+          <span>День</span>
+          <strong id="dayTotal">0 ₽</strong>
+          <small id="dayMeta">0 смен</small>
+        </article>
+        <article class="metric">
+          <span>Неделя</span>
+          <strong id="weekTotal">0 ₽</strong>
+          <small id="weekMeta">0 смен</small>
+        </article>
+        <article class="metric">
+          <span>Месяц</span>
+          <strong id="monthTotal">0 ₽</strong>
+          <small id="monthMeta">0 смен</small>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Продажа</h2>
+          </div>
+          <form class="sale-form" id="saleForm">
+            <div class="sale-product-cell">
+              <label>
+                Товар
+                <input
+                  id="productInput"
+                  list="productsDatalist"
+                  type="text"
+                  placeholder="Название"
+                  autocomplete="off"
+                  required
+                />
+              </label>
+              <fieldset class="payment-field">
+                <legend>Оплата</legend>
+                <label class="check-option">
+                  <input type="checkbox" name="paymentMethod" value="eqv" />
+                  <span>экв</span>
+                </label>
+                <label class="check-option">
+                  <input type="checkbox" name="paymentMethod" value="cash" checked />
+                  <span>нал</span>
+                </label>
+                <label class="check-option">
+                  <input type="checkbox" name="paymentMethod" value="transfer" />
+                  <span>пер</span>
+                </label>
+              </fieldset>
+            </div>
+            <datalist id="productsDatalist"></datalist>
+
+            <label>
+              Цена
+              <input
+                id="priceInput"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                required
+              />
+            </label>
+
+            <label>
+              Количество
+              <input
+                id="quantityInput"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                value="1"
+                required
+              />
+            </label>
+
+            <button class="button button-primary" type="submit">
+              Добавить товар
+            </button>
+          </form>
+          <div class="sale-cart">
+            <div class="sale-cart-heading">
+              <h3>Позиции продажи</h3>
+              <strong id="saleCartTotal">0 ₽</strong>
+            </div>
+            <div class="table-wrap sale-cart-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Товар</th>
+                    <th>Цена</th>
+                    <th>Кол-во</th>
+                    <th>Сумма</th>
+                    <th aria-label="Действия"></th>
+                  </tr>
+                </thead>
+                <tbody id="saleCartBody"></tbody>
+              </table>
+              <div class="empty-state is-visible" id="emptySaleCart">Добавьте товар в продажу</div>
+            </div>
+            <div class="sale-actions">
+              <button class="button button-light" id="clearSaleButton" type="button">
+                Очистить
+              </button>
+              <button class="button button-primary" id="commitSaleButton" type="button">
+                Добавить продажу
+              </button>
+            </div>
+          </div>
+          <p class="form-message" id="formMessage" aria-live="polite"></p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>Товары</h2>
+            <span class="counter" id="productsCounter">0</span>
+          </div>
+          <div class="products-list" id="productsList"></div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title panel-title-actions">
+          <div>
+            <h2>Текущая смена</h2>
+            <p id="shiftSubtitle">Продажи еще не добавлены</p>
+          </div>
+          <button class="button button-danger" id="closeShiftButton" type="button">
+            Закрыть смену
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Продажа</th>
+                <th>Время</th>
+                <th>Товар</th>
+                <th>Цена</th>
+                <th>Кол-во</th>
+                <th>Оплата</th>
+                <th>Сумма</th>
+                <th aria-label="Действия"></th>
+              </tr>
+            </thead>
+            <tbody id="currentSalesBody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyShift">Продаж пока нет</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title panel-title-actions">
+          <div>
+            <h2>Отчеты</h2>
+            <p id="reportRangeLabel">Сегодня</p>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Период отчета">
+            <button class="tab is-active" type="button" data-report="day">День</button>
+            <button class="tab" type="button" data-report="week">Неделя</button>
+            <button class="tab" type="button" data-report="month">Месяц</button>
+            <button class="tab" type="button" data-report="all">Все</button>
+          </div>
+        </div>
+
+        <div class="report-summary">
+          <div>
+            <span>Продажи</span>
+            <strong id="reportTotal">0 ₽</strong>
+          </div>
+          <div>
+            <span>Смены</span>
+            <strong id="reportShiftCount">0</strong>
+          </div>
+          <div>
+            <span>Позиций</span>
+            <strong id="reportLineCount">0</strong>
+          </div>
+          <div>
+            <span>Кол-во</span>
+            <strong id="reportQuantity">0</strong>
+          </div>
+          <div>
+            <span>Экв</span>
+            <strong id="reportEqvTotal">0 ₽</strong>
+          </div>
+          <div>
+            <span>Нал</span>
+            <strong id="reportCashTotal">0 ₽</strong>
+          </div>
+          <div>
+            <span>Пер</span>
+            <strong id="reportTransferTotal">0 ₽</strong>
+          </div>
+        </div>
+
+        <div class="report-layout">
+          <div class="table-block">
+            <h3>Смены</h3>
+            <div class="table-wrap compact">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Сумма</th>
+                    <th>Поз.</th>
+                    <th>Кол-во</th>
+                    <th>Экв</th>
+                    <th>Нал</th>
+                    <th>Пер</th>
+                  </tr>
+                </thead>
+                <tbody id="closedShiftsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-block">
+            <h3>По товарам</h3>
+            <div class="table-wrap compact">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Товар</th>
+                    <th>Кол-во</th>
+                    <th>Сумма</th>
+                  </tr>
+                </thead>
+                <tbody id="productReportBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

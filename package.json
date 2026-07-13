@@ -1,0 +1,60 @@
+{
+  "name": "uchetka",
+  "version": "1.0.0",
+  "description": "Desktop sales accounting app",
+  "main": "main.js",
+  "private": true,
+  "author": "ClockworkVL",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "publish": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ru.clockworkvl.uchetka",
+    "productName": "Uchetka",
+    "artifactName": "Uchetka-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Uchetka"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ClockworkVL",
+        "repo": "uchetka",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
