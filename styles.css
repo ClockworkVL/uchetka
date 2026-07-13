@@ -412,19 +412,6 @@ select:focus {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.product-base-category {
-  display: grid;
-  gap: 8px;
-}
-
-.product-base-category h3 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
 .product-category-list,
 .product-base-category-list {
   display: grid;
@@ -432,6 +419,7 @@ select:focus {
 }
 
 .product-category,
+.product-base-category,
 .sale-group {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -440,6 +428,10 @@ select:focus {
 }
 
 .product-category-list {
+  padding: 0 10px 10px;
+}
+
+.product-base-category-list {
   padding: 0 10px 10px;
 }
 
@@ -791,7 +783,7 @@ th.number {
   padding-top: 16px;
 }
 
-.product-base summary {
+.product-base > summary {
   cursor: pointer;
   color: var(--text);
   font-size: 18px;

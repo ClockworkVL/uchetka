@@ -395,10 +395,14 @@ function renderProductBaseList() {
     }).join("");
 
     return `
-      <section class="product-base-category">
-        <h3>${escapeHtml(group.category)}</h3>
+      <details class="product-base-category">
+        <summary class="accordion-summary">
+          <span class="accordion-arrow" aria-hidden="true"></span>
+          <span>${escapeHtml(group.category)}</span>
+          <small>${group.products.length}</small>
+        </summary>
         <div class="product-base-category-list">${rows}</div>
-      </section>
+      </details>
     `;
   }).join("");
 }
