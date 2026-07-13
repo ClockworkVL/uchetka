@@ -1,12 +1,46 @@
 "use strict";
 
 const path = require("node:path");
-const { app, BrowserWindow, Menu, dialog } = require("electron");
+const fs = require("node:fs");
+const { app, BrowserWindow, Menu, dialog, ipcMain } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const isDevelopment = !app.isPackaged;
+const DATA_FILE_NAME = "uchetka-data.json";
 
 app.setAppUserModelId("ru.clockworkvl.uchetka");
+
+function getDataFilePath() {
+  return path.join(app.getPath("userData"), DATA_FILE_NAME);
+}
+
+function setupDataStorage() {
+  ipcMain.handle("app-data:load", async () => {
+    const dataFilePath = getDataFilePath();
+
+    try {
+      if (!fs.existsSync(dataFilePath)) {
+        return null;
+      }
+
+      const fileContent = await fs.promises.readFile(dataFilePath, "utf8");
+      return JSON.parse(fileContent);
+    } catch (error) {
+      console.error("Не удалось прочитать файл данных:", error);
+      return null;
+    }
+  });
+
+  ipcMain.handle("app-data:save", async (_event, data) => {
+    const dataFilePath = getDataFilePath();
+    const tempFilePath = `${dataFilePath}.tmp`;
+
+    await fs.promises.mkdir(path.dirname(dataFilePath), { recursive: true });
+    await fs.promises.writeFile(tempFilePath, JSON.stringify(data, null, 2), "utf8");
+    await fs.promises.rename(tempFilePath, dataFilePath);
+    return true;
+  });
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -19,6 +53,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 
@@ -63,6 +98,7 @@ function setupAutoUpdates() {
 }
 
 app.whenReady().then(() => {
+  setupDataStorage();
   Menu.setApplicationMenu(null);
   createWindow();
   setupAutoUpdates();

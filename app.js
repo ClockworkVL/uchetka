@@ -19,6 +19,7 @@ const PAYMENT_METHODS = {
 };
 const DEFAULT_PAYMENT_METHOD = "cash";
 const PAYMENT_ORDER = ["eqv", "cash", "transfer"];
+const PERSISTENCE_VERSION = 1;
 
 const state = {
   products: loadFromStorage(STORAGE_KEYS.products, []),
@@ -28,6 +29,7 @@ const state = {
   saleDraft: [],
   activeReport: "day",
 };
+let persistentSaveTimer = null;
 
 const elements = {
   currentDate: document.querySelector("#currentDate"),
@@ -137,8 +139,7 @@ elements.tabs.forEach((tab) => {
   });
 });
 
-applySettings();
-render();
+initializeApp();
 
 function loadFromStorage(key, fallback) {
   try {
@@ -152,6 +153,140 @@ function loadFromStorage(key, fallback) {
 
 function saveToStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+  savePersistentSnapshot();
+}
+
+function initializeApp() {
+  applySettings();
+  render();
+  syncPersistentStorage();
+}
+
+async function syncPersistentStorage() {
+  if (!window.uchetkaStorage) {
+    return;
+  }
+
+  try {
+    const persistedData = await window.uchetkaStorage.load();
+
+    if (hasPersistedData(persistedData)) {
+      const mergedData = mergeDataSnapshots(persistedData, getCurrentDataSnapshot());
+      applyDataSnapshot(mergedData);
+      saveSnapshotToLocalStorage();
+      savePersistentSnapshot();
+      applySettings();
+      render();
+      return;
+    }
+
+    savePersistentSnapshot();
+  } catch (error) {
+    console.warn("Не удалось синхронизировать файл данных", error);
+  }
+}
+
+function getCurrentDataSnapshot() {
+  return {
+    version: PERSISTENCE_VERSION,
+    savedAt: new Date().toISOString(),
+    products: state.products,
+    currentSales: state.currentSales,
+    shifts: state.shifts,
+    settings: state.settings,
+  };
+}
+
+function hasPersistedData(data) {
+  return Boolean(
+    data
+      && (
+        Array.isArray(data.products)
+        || Array.isArray(data.currentSales)
+        || Array.isArray(data.shifts)
+        || data.settings
+      ),
+  );
+}
+
+function mergeDataSnapshots(persistedData, localData) {
+  return {
+    version: PERSISTENCE_VERSION,
+    savedAt: new Date().toISOString(),
+    products: mergeProducts(localData.products, persistedData.products),
+    currentSales: mergeById(localData.currentSales, persistedData.currentSales),
+    shifts: mergeById(localData.shifts, persistedData.shifts),
+    settings: normalizeSettings(persistedData.settings || localData.settings),
+  };
+}
+
+function mergeProducts(localProducts = [], persistedProducts = []) {
+  const products = new Map();
+
+  [...localProducts, ...persistedProducts].forEach((product) => {
+    if (!product || !product.name) {
+      return;
+    }
+
+    const key = product.name.toLocaleLowerCase("ru-RU");
+    const existingProduct = products.get(key);
+
+    if (!existingProduct || isNewerProduct(product, existingProduct)) {
+      products.set(key, product);
+    }
+  });
+
+  return [...products.values()].sort((firstProduct, secondProduct) => {
+    return firstProduct.name.localeCompare(secondProduct.name, "ru-RU");
+  });
+}
+
+function mergeById(localItems = [], persistedItems = []) {
+  const items = new Map();
+
+  [...localItems, ...persistedItems].forEach((item) => {
+    if (!item) {
+      return;
+    }
+
+    const id = item.id || createId();
+    items.set(id, item.id ? item : { ...item, id });
+  });
+
+  return [...items.values()];
+}
+
+function isNewerProduct(product, existingProduct) {
+  const productDate = new Date(product.updatedAt || product.createdAt || 0).getTime();
+  const existingDate = new Date(existingProduct.updatedAt || existingProduct.createdAt || 0).getTime();
+  return productDate >= existingDate;
+}
+
+function applyDataSnapshot(snapshot) {
+  state.products = Array.isArray(snapshot.products) ? snapshot.products : [];
+  state.currentSales = Array.isArray(snapshot.currentSales) ? snapshot.currentSales : [];
+  state.shifts = Array.isArray(snapshot.shifts) ? snapshot.shifts : [];
+  state.settings = normalizeSettings(snapshot.settings || DEFAULT_SETTINGS);
+}
+
+function saveSnapshotToLocalStorage() {
+  localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(state.products));
+  localStorage.setItem(STORAGE_KEYS.currentSales, JSON.stringify(state.currentSales));
+  localStorage.setItem(STORAGE_KEYS.shifts, JSON.stringify(state.shifts));
+  localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
+}
+
+function savePersistentSnapshot() {
+  if (!window.uchetkaStorage) {
+    return;
+  }
+
+  window.clearTimeout(persistentSaveTimer);
+  persistentSaveTimer = window.setTimeout(() => {
+    window.uchetkaStorage.save(getCurrentDataSnapshot()).catch((error) => {
+      console.warn("Не удалось сохранить файл данных", error);
+    });
+  }, 150);
 }
 
 function render() {

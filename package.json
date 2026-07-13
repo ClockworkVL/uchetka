@@ -1,6 +1,6 @@
 {
   "name": "uchetka",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Desktop sales accounting app",
   "main": "main.js",
   "private": true,
@@ -29,6 +29,7 @@
       "styles.css",
       "app.js",
       "main.js",
+      "preload.js",
       "package.json"
     ],
     "win": {
