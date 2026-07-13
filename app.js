@@ -51,8 +51,14 @@ const elements = {
   commitSaleButton: document.querySelector("#commitSaleButton"),
   clearSaleButton: document.querySelector("#clearSaleButton"),
   productsDatalist: document.querySelector("#productsDatalist"),
+  categoriesDatalist: document.querySelector("#categoriesDatalist"),
   productsCounter: document.querySelector("#productsCounter"),
   productsList: document.querySelector("#productsList"),
+  productBaseForm: document.querySelector("#productBaseForm"),
+  productBaseCategoryInput: document.querySelector("#productBaseCategoryInput"),
+  productBaseNameInput: document.querySelector("#productBaseNameInput"),
+  productBasePriceInput: document.querySelector("#productBasePriceInput"),
+  productBaseList: document.querySelector("#productBaseList"),
   formMessage: document.querySelector("#formMessage"),
   shiftSubtitle: document.querySelector("#shiftSubtitle"),
   closeShiftButton: document.querySelector("#closeShiftButton"),
@@ -114,7 +120,9 @@ elements.paymentInputs.forEach((input) => {
 elements.saleCartBody.addEventListener("click", handleSaleDraftClick);
 elements.commitSaleButton.addEventListener("click", commitSaleDraft);
 elements.clearSaleButton.addEventListener("click", clearSaleDraft);
+elements.productBaseForm.addEventListener("submit", addProductFromBase);
 elements.productsList.addEventListener("click", handleProductClick);
+elements.productBaseList.addEventListener("click", handleProductClick);
 elements.currentSalesBody.addEventListener("click", handleCurrentSaleClick);
 elements.closeShiftButton.addEventListener("click", closeShift);
 elements.printReceiptButton.addEventListener("click", printSelectedReceipt);
@@ -180,30 +188,115 @@ function renderMetrics() {
 function renderProducts() {
   elements.productsCounter.textContent = String(state.products.length);
   elements.productsDatalist.innerHTML = "";
+  elements.categoriesDatalist.innerHTML = "";
   elements.productsList.innerHTML = "";
+  elements.productBaseList.innerHTML = "";
 
   if (state.products.length === 0) {
     elements.productsList.innerHTML = `<div class="empty-state is-visible">Список товаров пуст</div>`;
+    elements.productBaseList.innerHTML = `<div class="empty-state is-visible">База товаров пустая</div>`;
     return;
   }
+
+  const categories = getProductCategories();
+  categories.forEach((category) => {
+    const option = document.createElement("option");
+    option.value = category;
+    elements.categoriesDatalist.append(option);
+  });
+
+  getProductsByCategory().forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "product-category";
+    section.innerHTML = `
+      <h3>${escapeHtml(group.category)}</h3>
+      <div class="product-category-list"></div>
+    `;
+    const categoryList = section.querySelector(".product-category-list");
+
+    group.products.forEach((product) => {
+      const row = createProductRow(product);
+      categoryList.append(row);
+    });
+
+    elements.productsList.append(section);
+  });
 
   state.products.forEach((product) => {
     const option = document.createElement("option");
     option.value = product.name;
     option.label = formatMoney(product.price);
     elements.productsDatalist.append(option);
-
-    const row = document.createElement("div");
-    row.className = "product-row";
-    row.innerHTML = `
-      <button class="product-pick" type="button" data-product="${escapeAttribute(product.name)}">
-        <span class="product-name">${escapeHtml(product.name)}</span>
-        <span class="product-price">${formatMoney(product.price)}</span>
-      </button>
-      <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
-    `;
-    elements.productsList.append(row);
   });
+
+  renderProductBaseList();
+}
+
+function renderProductBaseList() {
+  const groups = getProductsByCategory();
+
+  elements.productBaseList.innerHTML = groups.map((group) => {
+    const rows = group.products.map((product) => {
+      return `
+        <div class="product-base-row">
+          <div>
+            <strong>${escapeHtml(product.name)}</strong>
+            <span>${formatMoney(product.price)}</span>
+          </div>
+          <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <section class="product-base-category">
+        <h3>${escapeHtml(group.category)}</h3>
+        <div class="product-base-category-list">${rows}</div>
+      </section>
+    `;
+  }).join("");
+}
+
+function createProductRow(product) {
+  const row = document.createElement("div");
+  row.className = "product-row";
+  row.innerHTML = `
+    <button class="product-pick" type="button" data-product="${escapeAttribute(product.name)}">
+      <span class="product-name">${escapeHtml(product.name)}</span>
+      <span class="product-price">${formatMoney(product.price)}</span>
+    </button>
+    <button class="product-delete" type="button" data-delete-product="${escapeAttribute(product.name)}" aria-label="Удалить товар">×</button>
+  `;
+  return row;
+}
+
+function getProductsByCategory() {
+  const groups = new Map();
+
+  [...state.products]
+    .sort((firstProduct, secondProduct) => {
+      const firstCategory = getProductCategory(firstProduct);
+      const secondCategory = getProductCategory(secondProduct);
+      return firstCategory.localeCompare(secondCategory, "ru-RU")
+        || firstProduct.name.localeCompare(secondProduct.name, "ru-RU");
+    })
+    .forEach((product) => {
+      const category = getProductCategory(product);
+      const group = groups.get(category) || { category, products: [] };
+      group.products.push(product);
+      groups.set(category, group);
+    });
+
+  return [...groups.values()];
+}
+
+function getProductCategories() {
+  return [...new Set(state.products.map(getProductCategory))]
+    .sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory, "ru-RU"));
+}
+
+function getProductCategory(product) {
+  return normalizeName(product.category || "") || "Без категории";
 }
 
 function renderSaleDraft() {
@@ -389,6 +482,29 @@ function addDraftItem(event) {
   }
 }
 
+function addProductFromBase(event) {
+  event.preventDefault();
+
+  try {
+    const productName = normalizeName(elements.productBaseNameInput.value);
+    const price = parsePositiveNumber(elements.productBasePriceInput.value, "Укажите цену товара");
+    const category = normalizeName(elements.productBaseCategoryInput.value);
+
+    if (!productName) {
+      throw new Error("Укажите название товара");
+    }
+
+    upsertProduct(productName, price, category);
+    elements.productBaseNameInput.value = "";
+    elements.productBasePriceInput.value = "";
+    elements.productBaseNameInput.focus();
+    showSettingsMessage(`Товар добавлен в базу: ${productName}`);
+    render();
+  } catch (error) {
+    showSettingsMessage(error.message);
+  }
+}
+
 function commitSaleDraft() {
   if (state.saleDraft.length === 0) {
     showMessage("Добавьте хотя бы один товар", true);
@@ -543,17 +659,24 @@ function fillPriceFromProduct() {
   }
 }
 
-function upsertProduct(name, price) {
+function upsertProduct(name, price, category = null) {
   const product = findProduct(name);
+  const normalizedCategory = category === null
+    ? null
+    : normalizeName(category);
 
   if (product) {
     product.price = price;
+    if (normalizedCategory !== null) {
+      product.category = normalizedCategory;
+    }
     product.updatedAt = new Date().toISOString();
   } else {
     state.products.push({
       id: createId(),
       name,
       price,
+      category: normalizedCategory || "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

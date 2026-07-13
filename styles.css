@@ -397,10 +397,31 @@ select:focus {
 
 .products-list {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   max-height: 210px;
   overflow: auto;
   padding-right: 4px;
+}
+
+.product-category,
+.product-base-category {
+  display: grid;
+  gap: 8px;
+}
+
+.product-category h3,
+.product-base-category h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.product-category-list,
+.product-base-category-list {
+  display: grid;
+  gap: 8px;
 }
 
 .product-row {
@@ -613,6 +634,68 @@ th.number {
   font-size: 14px;
 }
 
+.product-base {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.product-base summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.product-base-form {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.8fr) minmax(220px, 1.2fr) minmax(120px, 0.5fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.product-base-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  max-height: 340px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.product-base-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--soft);
+  padding: 9px 10px;
+}
+
+.product-base-row div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.product-base-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-base-row span {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .report-summary strong {
   display: block;
   margin-top: 7px;
@@ -668,6 +751,14 @@ th.number {
     grid-template-columns: 1fr 1fr;
   }
 
+  .product-base-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .product-base-form .button {
+    grid-column: 1 / -1;
+  }
+
   .sale-form .button {
     grid-column: 1 / -1;
   }
@@ -688,7 +779,8 @@ th.number {
   .workbench,
   .report-summary,
   .report-layout,
-  .sale-form {
+  .sale-form,
+  .product-base-form {
     grid-template-columns: 1fr;
   }
 

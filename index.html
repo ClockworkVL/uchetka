@@ -297,6 +297,48 @@
             />
           </label>
         </div>
+        <details class="product-base">
+          <summary>База товаров</summary>
+          <form class="product-base-form" id="productBaseForm">
+            <label>
+              Категория
+              <input
+                id="productBaseCategoryInput"
+                list="categoriesDatalist"
+                type="text"
+                placeholder="Например: Канцтовары"
+                autocomplete="off"
+              />
+            </label>
+            <datalist id="categoriesDatalist"></datalist>
+            <label>
+              Товар
+              <input
+                id="productBaseNameInput"
+                type="text"
+                placeholder="Название"
+                autocomplete="off"
+                required
+              />
+            </label>
+            <label>
+              Цена
+              <input
+                id="productBasePriceInput"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                required
+              />
+            </label>
+            <button class="button button-primary" type="submit">
+              Добавить в базу
+            </button>
+          </form>
+          <div class="product-base-list" id="productBaseList"></div>
+        </details>
         <p class="settings-message" id="settingsMessage" aria-live="polite"></p>
       </section>
     </main>
