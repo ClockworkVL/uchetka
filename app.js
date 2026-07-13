@@ -81,6 +81,9 @@ const elements = {
   productReportBody: document.querySelector("#productReportBody"),
   themeInputs: document.querySelectorAll('input[name="theme"]'),
   companyNameInput: document.querySelector("#companyNameInput"),
+  checkUpdateButton: document.querySelector("#checkUpdateButton"),
+  installUpdateButton: document.querySelector("#installUpdateButton"),
+  updateStatus: document.querySelector("#updateStatus"),
   settingsMessage: document.querySelector("#settingsMessage"),
 };
 
@@ -132,6 +135,8 @@ elements.themeInputs.forEach((input) => {
   input.addEventListener("change", () => updateTheme(input.value));
 });
 elements.companyNameInput.addEventListener("input", updateCompanyName);
+elements.checkUpdateButton.addEventListener("click", checkForAppUpdate);
+elements.installUpdateButton.addEventListener("click", installAppUpdate);
 elements.tabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     state.activeReport = tab.dataset.report;
@@ -158,6 +163,7 @@ function saveToStorage(key, value) {
 
 function initializeApp() {
   applySettings();
+  setupUpdaterControls();
   render();
   syncPersistentStorage();
 }
@@ -1133,6 +1139,73 @@ function updateCompanyName() {
   saveSettings();
   applySettings({ syncInputs: false });
   showSettingsMessage("Название компании сохранено");
+}
+
+function setupUpdaterControls() {
+  if (!window.uchetkaUpdater) {
+    elements.checkUpdateButton.disabled = true;
+    elements.installUpdateButton.disabled = true;
+    elements.updateStatus.textContent = "Обновления доступны в установленной программе";
+    return;
+  }
+
+  window.uchetkaUpdater.onStatus((status) => {
+    updateUpdaterStatus(status);
+  });
+}
+
+async function checkForAppUpdate() {
+  if (!window.uchetkaUpdater) {
+    updateUpdaterStatus({ message: "Обновления доступны в установленной программе" });
+    return;
+  }
+
+  elements.checkUpdateButton.disabled = true;
+  elements.installUpdateButton.disabled = true;
+  updateUpdaterStatus({ message: "Проверяем обновление..." });
+
+  try {
+    const result = await window.uchetkaUpdater.check();
+    updateUpdaterStatus(result);
+  } catch (error) {
+    updateUpdaterStatus({
+      canCheck: true,
+      canInstall: false,
+      message: "Не удалось проверить обновление",
+    });
+  }
+}
+
+async function installAppUpdate() {
+  if (!window.uchetkaUpdater) {
+    return;
+  }
+
+  elements.installUpdateButton.disabled = true;
+  updateUpdaterStatus({ message: "Устанавливаем обновление..." });
+
+  try {
+    const result = await window.uchetkaUpdater.install();
+    updateUpdaterStatus(result);
+  } catch (error) {
+    updateUpdaterStatus({
+      canCheck: true,
+      canInstall: false,
+      message: "Обновление еще не готово",
+    });
+  }
+}
+
+function updateUpdaterStatus(status = {}) {
+  if (status.message) {
+    elements.updateStatus.textContent = status.message;
+  }
+
+  if (typeof status.canCheck === "boolean") {
+    elements.checkUpdateButton.disabled = !status.canCheck;
+  }
+
+  elements.installUpdateButton.disabled = !status.canInstall;
 }
 
 function showSettingsMessage(message) {

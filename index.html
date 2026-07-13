@@ -282,6 +282,18 @@
               autocomplete="organization"
             />
           </label>
+          <div class="settings-block update-block">
+            <span class="settings-label">Обновления</span>
+            <div class="update-actions">
+              <button class="button button-light" id="checkUpdateButton" type="button">
+                Проверить обновление
+              </button>
+              <button class="button button-primary" id="installUpdateButton" type="button" disabled>
+                Обновить
+              </button>
+            </div>
+            <span class="update-status" id="updateStatus">Готово к проверке</span>
+          </div>
         </div>
         <details class="product-base">
           <summary>База товаров</summary>
