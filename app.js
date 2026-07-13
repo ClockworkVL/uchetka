@@ -54,8 +54,6 @@ const elements = {
   commitSaleButton: document.querySelector("#commitSaleButton"),
   clearSaleButton: document.querySelector("#clearSaleButton"),
   productsDatalist: document.querySelector("#productsDatalist"),
-  categoriesDatalist: document.querySelector("#categoriesDatalist"),
-  subcategoriesDatalist: document.querySelector("#subcategoriesDatalist"),
   productsCounter: document.querySelector("#productsCounter"),
   productsList: document.querySelector("#productsList"),
   productBaseForm: document.querySelector("#productBaseForm"),
@@ -332,8 +330,6 @@ function renderMetrics() {
 function renderProducts() {
   elements.productsCounter.textContent = String(state.products.length);
   elements.productsDatalist.innerHTML = "";
-  elements.categoriesDatalist.innerHTML = "";
-  elements.subcategoriesDatalist.innerHTML = "";
   elements.productsList.innerHTML = "";
   elements.productBaseList.innerHTML = "";
 
@@ -342,19 +338,6 @@ function renderProducts() {
     elements.productBaseList.innerHTML = `<div class="empty-state is-visible">База товаров пустая</div>`;
     return;
   }
-
-  const categories = getProductCategories();
-  categories.forEach((category) => {
-    const option = document.createElement("option");
-    option.value = category;
-    elements.categoriesDatalist.append(option);
-  });
-
-  getProductSubcategories().forEach((subcategory) => {
-    const option = document.createElement("option");
-    option.value = subcategory;
-    elements.subcategoriesDatalist.append(option);
-  });
 
   getProductsByCategory().forEach((group) => {
     const section = document.createElement("details");
@@ -514,18 +497,6 @@ function getProductsByCategory() {
     products: group.products,
     subcategories: [...group.subcategories.values()],
   }));
-}
-
-function getProductCategories() {
-  return [...new Set(state.products.map(getProductCategory))]
-    .sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory, "ru-RU"));
-}
-
-function getProductSubcategories() {
-  return [...new Set(state.products
-    .map((product) => normalizeName(product.subcategory || ""))
-    .filter(Boolean))]
-    .sort((firstSubcategory, secondSubcategory) => firstSubcategory.localeCompare(secondSubcategory, "ru-RU"));
 }
 
 function getProductCategory(product) {
