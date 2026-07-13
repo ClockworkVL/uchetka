@@ -17,6 +17,11 @@ const PAYMENT_METHODS = {
   cash: "нал",
   transfer: "пер",
 };
+const RECEIPT_PAYMENT_LABELS = {
+  eqv: "Оплата Эквайрингом",
+  cash: "Оплата наличными",
+  transfer: "Оплата по QR-коду",
+};
 const DEFAULT_PRODUCT_CATEGORY = "Без категории";
 const NEW_CATEGORY_VALUE = "__new__";
 const DEFAULT_PAYMENT_METHOD = "cash";
@@ -1286,7 +1291,7 @@ function getCurrentSaleGroups() {
 function buildReceiptHtml(group) {
   const summary = summarizeSales(group.sales);
   const companyName = state.settings.companyName || "Компания не указана";
-  const paymentMethod = getPaymentLabel(group.paymentMethod);
+  const paymentMethod = getReceiptPaymentLabel(group.paymentMethod);
   const createdAt = dateTimeFormatter.format(new Date(group.createdAt));
   const rows = group.sales.map((sale, index) => {
     return `
@@ -1687,6 +1692,10 @@ function getPaymentMethod(paymentMethod) {
 
 function getPaymentLabel(paymentMethod) {
   return PAYMENT_METHODS[getPaymentMethod(paymentMethod)];
+}
+
+function getReceiptPaymentLabel(paymentMethod) {
+  return RECEIPT_PAYMENT_LABELS[getPaymentMethod(paymentMethod)];
 }
 
 function parsePositiveNumber(value, message) {
