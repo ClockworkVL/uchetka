@@ -18,6 +18,7 @@ const PAYMENT_METHODS = {
   transfer: "пер",
 };
 const DEFAULT_PRODUCT_CATEGORY = "Без категории";
+const NEW_CATEGORY_VALUE = "__new__";
 const DEFAULT_PAYMENT_METHOD = "cash";
 const PAYMENT_ORDER = ["eqv", "cash", "transfer"];
 const PERSISTENCE_VERSION = 1;
@@ -60,7 +61,9 @@ const elements = {
   productsCounter: document.querySelector("#productsCounter"),
   productsList: document.querySelector("#productsList"),
   productBaseForm: document.querySelector("#productBaseForm"),
+  productBaseCategorySelect: document.querySelector("#productBaseCategorySelect"),
   productBaseCategoryInput: document.querySelector("#productBaseCategoryInput"),
+  productBaseSubcategorySelect: document.querySelector("#productBaseSubcategorySelect"),
   productBaseSubcategoryInput: document.querySelector("#productBaseSubcategoryInput"),
   productBaseNameInput: document.querySelector("#productBaseNameInput"),
   productBasePriceInput: document.querySelector("#productBasePriceInput"),
@@ -136,6 +139,8 @@ elements.saleCartBody.addEventListener("click", handleSaleDraftClick);
 elements.commitSaleButton.addEventListener("click", commitSaleDraft);
 elements.clearSaleButton.addEventListener("click", clearSaleDraft);
 elements.productBaseForm.addEventListener("submit", addProductFromBase);
+elements.productBaseCategorySelect.addEventListener("change", handleProductBaseCategorySelect);
+elements.productBaseSubcategorySelect.addEventListener("change", handleProductBaseSubcategorySelect);
 elements.cancelProductEditButton.addEventListener("click", cancelProductEdit);
 elements.productsList.addEventListener("click", handleProductClick);
 elements.productBaseList.addEventListener("click", handleProductClick);
@@ -738,8 +743,8 @@ function addProductFromBase(event) {
   try {
     const productName = normalizeName(elements.productBaseNameInput.value);
     const price = parsePositiveNumber(elements.productBasePriceInput.value, "Укажите цену товара");
-    const category = normalizeName(elements.productBaseCategoryInput.value);
-    const subcategory = normalizeName(elements.productBaseSubcategoryInput.value);
+    const category = getProductBaseCategoryValue({ validate: true });
+    const subcategory = getProductBaseSubcategoryValue({ validate: true });
 
     if (!productName) {
       throw new Error("Укажите название товара");
@@ -906,8 +911,7 @@ function startProductEdit(productName) {
   state.activeAppTab = "settings";
   state.activeSettingsTab = "product-base";
   state.editingProductName = product.name;
-  elements.productBaseCategoryInput.value = product.category || "";
-  elements.productBaseSubcategoryInput.value = product.subcategory || "";
+  renderProductBaseSelectors(product.category || "", product.subcategory || "");
   elements.productBaseNameInput.value = product.name;
   elements.productBasePriceInput.value = String(product.price);
   renderAppTabs();
@@ -1052,10 +1056,135 @@ function updateProduct(currentName, changes) {
   saveToStorage(STORAGE_KEYS.products, state.products);
 }
 
+function handleProductBaseCategorySelect() {
+  syncCategoryInputVisibility();
+  renderProductBaseSubcategorySelect(getProductBaseCategoryValue(), "");
+}
+
+function handleProductBaseSubcategorySelect() {
+  syncSubcategoryInputVisibility();
+}
+
+function renderProductBaseSelectors(category = getProductBaseCategoryValue(), subcategory = getProductBaseSubcategoryValue()) {
+  renderProductBaseCategorySelect(category);
+  renderProductBaseSubcategorySelect(category, subcategory);
+}
+
+function renderProductBaseCategorySelect(category) {
+  const categories = getStoredProductCategories();
+  const normalizedCategory = normalizeName(category || "");
+  const existingCategory = findNormalizedValue(categories, normalizedCategory);
+  const shouldUseNewCategory = Boolean(normalizedCategory && !existingCategory);
+  const selectedValue = shouldUseNewCategory ? NEW_CATEGORY_VALUE : existingCategory || "";
+
+  elements.productBaseCategorySelect.innerHTML = [
+    createOptionHtml("", "Без категории"),
+    ...categories.map((item) => createOptionHtml(item, item)),
+    createOptionHtml(NEW_CATEGORY_VALUE, "+ Новая категория"),
+  ].join("");
+  elements.productBaseCategorySelect.value = selectedValue;
+  elements.productBaseCategoryInput.value = shouldUseNewCategory ? normalizedCategory : "";
+  syncCategoryInputVisibility();
+}
+
+function renderProductBaseSubcategorySelect(category, subcategory) {
+  const normalizedCategory = normalizeName(category || "");
+  const subcategories = getStoredProductSubcategories(normalizedCategory);
+  const normalizedSubcategory = normalizeName(subcategory || "");
+  const existingSubcategory = findNormalizedValue(subcategories, normalizedSubcategory);
+  const shouldUseNewSubcategory = Boolean(normalizedSubcategory && !existingSubcategory);
+  const selectedValue = shouldUseNewSubcategory ? NEW_CATEGORY_VALUE : existingSubcategory || "";
+
+  elements.productBaseSubcategorySelect.innerHTML = [
+    createOptionHtml("", "Без подкатегории"),
+    ...subcategories.map((item) => createOptionHtml(item, item)),
+    createOptionHtml(NEW_CATEGORY_VALUE, "+ Новая подкатегория"),
+  ].join("");
+  elements.productBaseSubcategorySelect.value = selectedValue;
+  elements.productBaseSubcategoryInput.value = shouldUseNewSubcategory ? normalizedSubcategory : "";
+  syncSubcategoryInputVisibility();
+}
+
+function syncCategoryInputVisibility() {
+  const isNewCategory = elements.productBaseCategorySelect.value === NEW_CATEGORY_VALUE;
+  elements.productBaseCategoryInput.hidden = !isNewCategory;
+  elements.productBaseCategoryInput.required = isNewCategory;
+
+  if (isNewCategory) {
+    elements.productBaseCategoryInput.focus();
+  }
+}
+
+function syncSubcategoryInputVisibility() {
+  const isNewSubcategory = elements.productBaseSubcategorySelect.value === NEW_CATEGORY_VALUE;
+  elements.productBaseSubcategoryInput.hidden = !isNewSubcategory;
+  elements.productBaseSubcategoryInput.required = isNewSubcategory;
+
+  if (isNewSubcategory) {
+    elements.productBaseSubcategoryInput.focus();
+  }
+}
+
+function getProductBaseCategoryValue(options = {}) {
+  const isNewCategory = elements.productBaseCategorySelect.value === NEW_CATEGORY_VALUE;
+  const rawCategory = isNewCategory
+    ? normalizeName(elements.productBaseCategoryInput.value)
+    : normalizeName(elements.productBaseCategorySelect.value);
+  const category = isNewCategory
+    ? findNormalizedValue(getStoredProductCategories(), rawCategory) || rawCategory
+    : rawCategory;
+
+  if (options.validate && isNewCategory && !category) {
+    throw new Error("Укажите новую категорию");
+  }
+
+  return category;
+}
+
+function getProductBaseSubcategoryValue(options = {}) {
+  const isNewSubcategory = elements.productBaseSubcategorySelect.value === NEW_CATEGORY_VALUE;
+  const rawSubcategory = isNewSubcategory
+    ? normalizeName(elements.productBaseSubcategoryInput.value)
+    : normalizeName(elements.productBaseSubcategorySelect.value);
+  const subcategory = isNewSubcategory
+    ? findNormalizedValue(getStoredProductSubcategories(getProductBaseCategoryValue()), rawSubcategory) || rawSubcategory
+    : rawSubcategory;
+
+  if (options.validate && isNewSubcategory && !subcategory) {
+    throw new Error("Укажите новую подкатегорию");
+  }
+
+  return subcategory;
+}
+
+function getStoredProductCategories() {
+  return [...new Set(state.products
+    .map((product) => normalizeName(product.category || ""))
+    .filter(Boolean))]
+    .sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory, "ru-RU"));
+}
+
+function getStoredProductSubcategories(category) {
+  const normalizedCategory = normalizeName(category || "");
+  return [...new Set(state.products
+    .filter((product) => normalizeName(product.category || "") === normalizedCategory)
+    .map((product) => normalizeName(product.subcategory || ""))
+    .filter(Boolean))]
+    .sort((firstSubcategory, secondSubcategory) => firstSubcategory.localeCompare(secondSubcategory, "ru-RU"));
+}
+
+function findNormalizedValue(items, value) {
+  const normalizedValue = normalizeName(value || "").toLocaleLowerCase("ru-RU");
+  return items.find((item) => item.toLocaleLowerCase("ru-RU") === normalizedValue) || "";
+}
+
+function createOptionHtml(value, label) {
+  return `<option value="${escapeAttribute(value)}">${escapeHtml(label)}</option>`;
+}
+
 function clearProductBaseForm(options = {}) {
   const shouldFocusName = options.focusName !== false;
-  elements.productBaseCategoryInput.value = "";
-  elements.productBaseSubcategoryInput.value = "";
+  renderProductBaseSelectors("", "");
   elements.productBaseNameInput.value = "";
   elements.productBasePriceInput.value = "";
 
@@ -1344,6 +1473,8 @@ function renderProductBaseForm() {
     state.editingProductName = null;
     clearProductBaseForm({ focusName: false });
   }
+
+  renderProductBaseSelectors();
 
   const isEditing = Boolean(state.editingProductName);
   elements.productBaseSubmitButton.textContent = isEditing

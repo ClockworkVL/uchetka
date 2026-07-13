@@ -316,20 +316,30 @@
           <form class="product-base-form" id="productBaseForm">
             <label>
               Категория
+              <select id="productBaseCategorySelect">
+                <option value="">Без категории</option>
+                <option value="__new__">+ Новая категория</option>
+              </select>
               <input
                 id="productBaseCategoryInput"
                 type="text"
-                placeholder="Например: Канцтовары"
+                placeholder="Новая категория"
                 autocomplete="off"
+                hidden
               />
             </label>
             <label>
               Подкатегория
+              <select id="productBaseSubcategorySelect">
+                <option value="">Без подкатегории</option>
+                <option value="__new__">+ Новая подкатегория</option>
+              </select>
               <input
                 id="productBaseSubcategoryInput"
                 type="text"
-                placeholder="Например: Энергетики"
+                placeholder="Новая подкатегория"
                 autocomplete="off"
+                hidden
               />
             </label>
             <label>
